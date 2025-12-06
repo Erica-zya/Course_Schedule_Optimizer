@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stanford Navigate Enrollment</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --cardinal-red: #8C1515;
+            --cardinal-dark: #820000;
+            --cool-grey: #4d4f53;
+            --black-80: #2e2d29;
+        }
+        
+        body { background-color: #f8fafc; font-family: 'Source Sans Pro', sans-serif; }
+        .chat-bubble { position: relative; padding: 12px 16px; border-radius: 15px; max-width: 85%; line-height: 1.5; }
+        .chat-user { background-color: var(--cardinal-red); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-ai { background-color: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="app" class="h-screen flex flex-col overflow-hidden font-sans text-[#2e2d29]">
+        
+        <nav class="bg-[#8C1515] text-white shadow-md z-50 flex-shrink-0">
+            <div class="container mx-auto px-6 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-days text-white text-sm"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-wide font-serif">Stanford <span class="font-light opacity-90">Navigate Enrollment</span></span>
+                </div>
+
+                <div class="flex bg-[#660000] rounded p-1 gap-1">
+                    <button @click="page = 'input'" 
+                        :class="{'bg-white text-[#8C1515] shadow-sm': page === 'input', 'text-white/70 hover:text-white': page !== 'input'}"
+                        class="px-5 py-1.5 rounded text-sm font-semibold transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square"></i> Input
+                    </button>
+                    <button @click="page = 'output'" 
+                        :class="{'bg-white text-[#8C1515] shadow-sm': page === 'output', 'text-white/70 hover:text-white': page !== 'output'}"
+                        class="px-5 py-1.5 rounded text-sm font-semibold transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-week"></i> Schedule
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3 bg-[#660000] pl-4 pr-1 py-1 rounded-full border border-[#990000]">
+                    <span class="text-[10px] text-white/60 uppercase font-bold tracking-wider">Viewing as</span>
+                    <div class="flex bg-[#820000] rounded-full p-0.5">
+                        <button @click="role = 'staff'" 
+                            :class="{'bg-white text-[#8C1515]': role === 'staff', 'text-white/60 hover:text-white': role !== 'staff'}"
+                            class="px-3 py-1 rounded-full text-xs font-bold transition-all">
+                            Staff
+                        </button>
+                        <button @click="role = 'professor'" 
+                            :class="{'bg-white text-[#8C1515]': role === 'professor', 'text-white/60 hover:text-white': role !== 'professor'}"
+                            class="px-3 py-1 rounded-full text-xs font-bold transition-all">
+                            Professor
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-grow overflow-hidden relative bg-[#f4f4f4]">
+            
+            <div v-if="page === 'input'" class="h-full overflow-y-auto p-8 animate-fade">
+                <div class="max-w-6xl mx-auto">
+                    
+                    <div class="mb-6 border-b pb-4 border-gray-200">
+                        <h1 class="text-3xl font-bold text-[#2e2d29] font-serif mb-2">
+                            {{ role === 'staff' ? 'Administrative Configuration' : 'Professor Preferences' }}
+                        </h1>
+                        <p class="text-gray-600">
+                            {{ role === 'staff' ? 'Capture every hard & soft constraint before sending the run to the MILP solver.' : 'Update your teaching availability and preference constraints.' }}
+                        </p>
+                    </div>
+
+                    <div v-if="role === 'staff'" class="grid lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between px-6 py-4 border-b bg-gray-50 rounded-t-lg">
+                                    <div class="flex items-center gap-2 font-semibold text-sm text-gray-600">
+                                        <i class="fa-solid fa-sliders text-[#8C1515]"></i> Constraint Builder
+                            </div>
+                            <button @click="loadSampleData" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                <i class="fa-solid fa-rotate-right"></i> Reset to Sample
+                            </button>
+                        </div>
+
+                                <div class="px-6 py-4 border-b">
+                                    <div class="flex flex-wrap gap-2 text-xs font-semibold uppercase text-gray-500">
+                                        <button v-for="tab in staffTabs" :key="tab.id"
+                                            @click="activeStaffTab = tab.id"
+                                            :class="activeStaffTab === tab.id ? 'bg-[#8C1515] text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                                            class="px-3 py-2 rounded-md transition-all">
+                                            {{ tab.label }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="p-6 space-y-6">
+                                    <div v-if="activeStaffTab === 'term'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-regular fa-calendar"></i> Term Configuration
+                                            </h3>
+                                            <span class="text-xs text-gray-400 uppercase tracking-wide font-bold">30-minute blocks enforced</span>
+                                        </div>
+                                        
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                            <div class="flex items-center gap-2 text-blue-800 font-semibold text-sm mb-2">
+                                                <i class="fa-solid fa-calendar-days"></i> Semester Dates
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <label class="text-sm text-gray-700 font-semibold">
+                                                    Semester Start Date
+                                                    <input type="date" v-model="inputForm.term_config.semester_start_date" 
+                                                        @change="updateSemesterDates"
+                                                        class="mt-1 w-full border rounded-md px-3 py-2 text-gray-700 focus:ring-2 focus:ring-[#8C1515] focus:border-[#8C1515]">
+                                                    <p class="text-xs text-gray-500 mt-1">First day of classes</p>
+                                                </label>
+                                                <label class="text-sm text-gray-700 font-semibold">
+                                                    Semester End Date
+                                                    <input type="date" v-model="inputForm.term_config.semester_end_date"
+                                                        @change="updateSemesterDates"
+                                                        class="mt-1 w-full border rounded-md px-3 py-2 text-gray-700 focus:ring-2 focus:ring-[#8C1515] focus:border-[#8C1515]">
+                                                    <p class="text-xs text-gray-500 mt-1">Last day of classes</p>
+                                                </label>
+                                            </div>
+                                            <div v-if="semesterDuration" class="mt-2 text-xs text-gray-600">
+                                                <i class="fa-solid fa-info-circle"></i> Duration: {{ semesterDuration }} weeks
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Number of Weeks
+                                                <input type="number" v-model.number="inputForm.term_config.num_weeks" 
+                                                    @input="validateWeeks"
+                                                    :class="{'border-red-500': !isWeeksValid}"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 text-gray-700 focus:ring-2 focus:ring-[#8C1515]">
+                                                <p v-if="!isWeeksValid" class="text-xs text-red-600 mt-1">Must match semester duration</p>
+                                            </label>
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Days (comma separated)
+                                                <input type="text" v-model="termDaysText" 
+                                                    @input="validateDays"
+                                                    :class="{'border-red-500': !isDaysValid}"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 text-gray-700 focus:ring-2 focus:ring-[#8C1515]" 
+                                                    placeholder="Mon, Tue, Wed">
+                                                <p v-if="!isDaysValid" class="text-xs text-red-600 mt-1">Invalid day names</p>
+                                            </label>
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Day Start Time
+                                                <input type="time" v-model="inputForm.term_config.day_start_time" 
+                                                    @change="validateTimeRange"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-[#8C1515]">
+                                            </label>
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Day End Time
+                                                <input type="time" v-model="inputForm.term_config.day_end_time"
+                                                    @change="validateTimeRange"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-[#8C1515]">
+                                            </label>
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Lunch Start
+                                                <input type="time" v-model="inputForm.term_config.lunch_start_time"
+                                                    @change="validateLunchTime"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-[#8C1515]">
+                                            </label>
+                                            <label class="text-sm text-gray-600 font-semibold">
+                                                Lunch End
+                                                <input type="time" v-model="inputForm.term_config.lunch_end_time"
+                                                    @change="validateLunchTime"
+                                                    class="mt-1 w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-[#8C1515]">
+                                            </label>
+                                        </div>
+                                        
+                                        <div v-if="timeRangeWarning" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                                            <i class="fa-solid fa-exclamation-triangle"></i> {{ timeRangeWarning }}
+                                        </div>
+                                    </div>
+
+                                    <div v-if="activeStaffTab === 'classrooms'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-solid fa-door-open"></i> Classrooms
+                                            </h3>
+                                            <button @click="addClassroom" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </div>
+                                        <div v-if="!inputForm.classrooms.length" class="text-sm text-gray-400">No classrooms defined.</div>
+                                        <div v-for="(room, idx) in inputForm.classrooms" :key="idx" class="border rounded-lg p-4 space-y-3 bg-gray-50">
+                                            <div class="flex justify-between text-xs text-gray-500 uppercase font-bold">
+                                                <span>Room {{ idx + 1 }}</span>
+                                                <button @click="removeClassroom(idx)" class="text-red-500 hover:text-red-700">Remove</button>
+                                            </div>
+                                            <div class="grid md:grid-cols-3 gap-3">
+                                                <input v-model="room.id" placeholder="ID" class="border rounded px-3 py-2 text-sm">
+                                                <input v-model="room.name" placeholder="Name" class="border rounded px-3 py-2 text-sm">
+                                                <input type="number" v-model.number="room.capacity" placeholder="Capacity" class="border rounded px-3 py-2 text-sm">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="activeStaffTab === 'instructors'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-solid fa-chalkboard-user"></i> Instructors
+                                            </h3>
+                                            <button @click="addInstructor" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </div>
+                                        <div v-if="!inputForm.instructors.length" class="text-sm text-gray-400">No instructors defined.</div>
+                                        <div v-for="(inst, idx) in inputForm.instructors" :key="idx" class="border rounded-lg p-4 space-y-3 bg-gray-50">
+                                            <div class="flex justify-between text-xs text-gray-500 uppercase font-bold">
+                                                <span>Instructor {{ idx + 1 }}</span>
+                                                <button @click="removeInstructor(idx)" class="text-red-500 hover:text-red-700">Remove</button>
+                                            </div>
+                                            <div class="grid md:grid-cols-2 gap-3">
+                                                <input v-model="inst.id" placeholder="ID" class="border rounded px-3 py-2 text-sm">
+                                                <input v-model="inst.name" placeholder="Name" class="border rounded px-3 py-2 text-sm">
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Allow Lunch
+                                                    <select v-model="inst.allow_lunch_teaching" class="mt-1 border rounded px-3 py-2 text-sm">
+                                                        <option :value="false">No</option>
+                                                        <option :value="true">Yes</option>
+                                                    </select>
+                                                </label>
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Back-to-Back Preference
+                                                    <select v-model.number="inst.back_to_back_preference" class="mt-1 border rounded px-3 py-2 text-sm">
+                                                        <option :value="-1">Prefer back-to-back</option>
+                                                        <option :value="0">Neutral</option>
+                                                        <option :value="1">Avoid back-to-back</option>
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <label class="text-xs font-semibold text-gray-500 uppercase">Availability (JSON array of {"day":"Mon","period_index":0})</label>
+                                                <textarea v-model="inst._availabilityJson" @blur="syncAvailabilityFromJson(inst)" class="mt-2 w-full border rounded px-3 py-2 font-mono text-xs" rows="3"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="activeStaffTab === 'courses'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-solid fa-book"></i> Courses
+                                            </h3>
+                                            <button @click="addCourse" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </div>
+                                        <div v-if="!inputForm.courses.length" class="text-sm text-gray-400">No courses defined.</div>
+                                        <div v-for="(course, idx) in inputForm.courses" :key="idx" class="border rounded-lg p-4 space-y-3 bg-gray-50">
+                                            <div class="flex justify-between text-xs text-gray-500 uppercase font-bold">
+                                                <span>Course {{ idx + 1 }}</span>
+                                                <button @click="removeCourse(idx)" class="text-red-500 hover:text-red-700">Remove</button>
+                                            </div>
+                                            <div class="grid md:grid-cols-2 gap-3">
+                                                <input v-model="course.id" placeholder="ID" class="border rounded px-3 py-2 text-sm">
+                                                <input v-model="course.name" placeholder="Name" class="border rounded px-3 py-2 text-sm">
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Type
+                                                    <select v-model="course.type" class="mt-1 border rounded px-3 py-2 text-sm">
+                                                        <option value="full_term">Full-term</option>
+                                                        <option value="first_half_term">First Half-term</option>
+                                                        <option value="second_half_term">Second Half-term</option>
+                                                    </select>
+                                                </label>
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Weekly Hours
+                                                    <input type="number" step="0.5" v-model.number="course.weekly_hours" class="mt-1 border rounded px-3 py-2 text-sm">
+                                                </label>
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Instructor ID
+                                                    <select v-model="course.instructor_id" class="mt-1 border rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#8C1515]">
+                                                        <option value="">Select instructor...</option>
+                                                        <option v-for="inst in inputForm.instructors" :key="inst.id" :value="inst.id">
+                                                            {{ inst.id }} - {{ inst.name }}
+                                                        </option>
+                                                    </select>
+                                                </label>
+                                                <label class="text-xs font-semibold text-gray-500 uppercase flex flex-col">
+                                                    Expected Enrollment
+                                                    <input type="number" v-model.number="course.expected_enrollment" class="mt-1 border rounded px-3 py-2 text-sm">
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="activeStaffTab === 'students'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-solid fa-user-graduate"></i> Students & Cohorts
+                                            </h3>
+                                            <button @click="addStudent" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                                <i class="fa-solid fa-plus"></i> Add
+                                            </button>
+                                        </div>
+                                        <div v-if="!inputForm.students.length" class="text-sm text-gray-400">No students defined.</div>
+                                        <div v-for="(student, idx) in inputForm.students" :key="idx" class="border rounded-lg p-4 space-y-3 bg-gray-50">
+                                            <div class="flex justify-between text-xs text-gray-500 uppercase font-bold">
+                                                <span>Student {{ idx + 1 }}</span>
+                                                <button @click="removeStudent(idx)" class="text-red-500 hover:text-red-700">Remove</button>
+                                            </div>
+                                            <div class="grid md:grid-cols-2 gap-3">
+                                                <input v-model="student.id" placeholder="ID" class="border rounded px-3 py-2 text-sm">
+                                                <input v-model="student.name" placeholder="Name" class="border rounded px-3 py-2 text-sm">
+                                            </div>
+                                            <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Enrolled Courses</div>
+                                            <div v-if="inputForm.courses.length === 0" class="text-xs text-gray-400 italic">
+                                                Add courses first to enable enrollment
+                                            </div>
+                                            <div v-else class="grid grid-cols-2 gap-2 mt-2">
+                                                <label v-for="course in inputForm.courses" :key="course.id" 
+                                                    class="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer">
+                                                    <input type="checkbox" 
+                                                        :value="course.id"
+                                                        :checked="(student.enrolled_course_ids || []).includes(course.id)"
+                                                        @change="toggleStudentCourse(student, course.id)"
+                                                        class="w-4 h-4 text-[#8C1515] rounded border-gray-300 focus:ring-[#8C1515]">
+                                                    <span class="text-sm text-gray-700">{{ course.id }} - {{ course.name }}</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="activeStaffTab === 'weights'" class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                                                <i class="fa-solid fa-balance-scale"></i> Soft Constraint Weights
+                                            </h3>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mb-4">
+                                            Adjust weights for soft constraints. Higher weights mean stronger preference enforcement.
+                                        </p>
+                                        <div class="grid md:grid-cols-2 gap-4">
+                                            <label class="text-xs font-semibold text-gray-500 uppercase">
+                                                S1: Student Conflict Weight (w₁)
+                                                <input type="number" step="0.1" min="0" v-model.number="inputForm.conflict_weights.global_student_conflict_weight" class="mt-1 border rounded px-3 py-2 text-sm w-full">
+                                                <span class="text-xs text-gray-400 mt-1 block">Penalize student schedule conflicts</span>
+                                            </label>
+                                            <label class="text-xs font-semibold text-gray-500 uppercase">
+                                                S2: Instructor Compactness Weight (w₂)
+                                                <input type="number" step="0.1" min="0" v-model.number="inputForm.conflict_weights.instructor_compactness_weight" class="mt-1 border rounded px-3 py-2 text-sm w-full">
+                                                <span class="text-xs text-gray-400 mt-1 block">Penalize gaps between instructor's courses</span>
+                                            </label>
+                                            <label class="text-xs font-semibold text-gray-500 uppercase">
+                                                S3: Preferred Time Slots Weight (w₃)
+                                                <input type="number" step="0.1" min="0" v-model.number="inputForm.conflict_weights.preferred_time_slots_weight" class="mt-1 border rounded px-3 py-2 text-sm w-full">
+                                                <span class="text-xs text-gray-400 mt-1 block">Penalize evening (after 18:00) & lunch scheduling</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+                            <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center gap-2 text-sm font-bold text-gray-600">
+                                    <i class="fa-solid fa-code"></i> Raw JSON Preview
+                                </div>
+                                <button @click="applyJsonToForm" class="text-xs font-bold text-[#8C1515] hover:underline flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> Apply JSON
+                                </button>
+                            </div>
+                            <textarea v-model="inputJson" class="flex-grow font-mono text-xs p-6 focus:ring-0 border-none resize-none outline-none text-gray-700 leading-relaxed bg-white" spellcheck="false"></textarea>
+                        </div>
+                    </div>
+
+                    <div v-if="role === 'professor'" class="space-y-6">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider">Identify Yourself</label>
+                            <div class="flex gap-4 items-center">
+                                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-lg">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                </div>
+                                <select v-model="selectedProfId" class="flex-grow p-3 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-[#8C1515] outline-none">
+                                    <option value="" disabled>Select your name...</option>
+                                    <option v-for="p in inputForm.instructors" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedProf" class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade">
+                            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <i class="fa-regular fa-clock text-gray-400"></i> Weekly Availability
+                                </h3>
+                                <p class="text-xs text-gray-500 mb-4">Click 30-minute slots to toggle. <span class="text-red-600 font-bold">Red</span> means unavailable.</p>
+                                
+                                <div class="grid" :style="`grid-template-columns: repeat(${inputForm.term_config.days.length}, minmax(0,1fr)); gap: 0.5rem;`">
+                                    <div v-for="day in inputForm.term_config.days" :key="day" class="text-center border rounded-lg p-2 bg-gray-50">
+                                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">{{ day }}</div>
+                                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                            <button v-for="slot in periodSlots" :key="`${day}-${slot.index}`"
+                                                @click="toggleAvailability(day, slot.index)"
+                                                :class="isSlotAvailable(day, slot.index) ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 line-through opacity-60'"
+                                                class="w-full py-1.5 text-xs rounded border transition-all font-medium flex items-center justify-center">
+                                                {{ slot.label }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit">
+                                <h3 class="font-bold text-gray-800 mb-4">Preferences</h3>
+                                
+                                <div class="space-y-6">
+                                    <div class="flex items-start gap-3">
+                                        <input type="checkbox" id="lunch" v-model="selectedProf.allow_lunch_teaching" class="mt-1 w-4 h-4 text-[#8C1515] rounded border-gray-300 focus:ring-[#8C1515]">
+                                        <label for="lunch" class="cursor-pointer">
+                                            <div class="font-semibold text-sm text-gray-700">Allow Lunch Teaching</div>
+                                            <div class="text-xs text-gray-500 mt-0.5">Willing to teach during 12:00-13:00 block.</div>
+                                        </label>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Back-to-Back Preference</label>
+                                        <select v-model.number="selectedProf.back_to_back_preference" class="w-full p-2.5 border border-gray-300 rounded-md text-sm bg-white focus:border-[#8C1515] outline-none">
+                                            <option :value="-1">Prefer back-to-back</option>
+                                            <option :value="0">No preference</option>
+                                            <option :value="1">Avoid back-to-back</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end sticky bottom-4">
+                        <button @click="runOptimization" :disabled="loading"
+                            class="bg-[#8C1515] hover:bg-[#660000] text-white px-8 py-3 rounded shadow-lg transition-all transform hover:-translate-y-0.5 font-bold flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span v-if="loading" class="animate-spin"><i class="fa-solid fa-circle-notch"></i></span>
+                            <span v-else><i class="fa-solid fa-bolt"></i></span>
+                            {{ loading ? 'Optimizing...' : 'Generate Schedule' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="page === 'output'" class="h-full flex animate-fade">
+                
+                <div class="w-96 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-20 shadow-sm">
+                    <div class="flex border-b border-gray-200">
+                        <button @click="sidebarTab = 'chat'" 
+                            :class="sidebarTab === 'chat' ? 'border-[#8C1515] text-[#8C1515] bg-red-50/30' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="flex-1 py-4 text-sm font-bold border-b-2 transition-colors">
+                            AI Assistant
+                        </button>
+                        <button @click="sidebarTab = 'whatif'" 
+                            :class="sidebarTab === 'whatif' ? 'border-[#8C1515] text-[#8C1515] bg-red-50/30' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="flex-1 py-4 text-sm font-bold border-b-2 transition-colors">
+                            What-If
+                        </button>
+                        <button @click="sidebarTab = 'history'" 
+                            :class="sidebarTab === 'history' ? 'border-[#8C1515] text-[#8C1515] bg-red-50/30' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="flex-1 py-4 text-sm font-bold border-b-2 transition-colors">
+                            History
+                        </button>
+                    </div>
+
+                    <div v-if="sidebarTab === 'chat'" class="flex-grow flex flex-col h-full overflow-hidden">
+                        <div class="flex-grow overflow-y-auto p-4 space-y-4 bg-[#f8fafc]">
+                            <div v-for="(msg, i) in chatMessages" :key="i" 
+                                :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'"
+                                class="chat-bubble text-sm shadow-sm border border-black/5">
+                                <div v-if="msg.role === 'ai'" class="flex items-center gap-2 mb-1 opacity-50 text-[10px] font-bold uppercase tracking-wider">
+                                    <i class="fa-solid fa-robot"></i> CourseOptimizer AI
+                                </div>
+                                <div v-if="msg.isTyping" class="flex items-center gap-1 text-gray-400">
+                                    <span class="animate-pulse">Thinking</span>
+                                    <span class="flex gap-1">
+                                        <span class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></span>
+                                        <span class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                                        <span class="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+                                    </span>
+                                </div>
+                                <div v-else>{{ msg.text }}</div>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-white border-t border-gray-200 space-y-2">
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <button v-if="chatMessages.length > 1" @click="clearChat" class="hover:text-[#8C1515] flex items-center gap-1">
+                                    <i class="fa-solid fa-trash"></i> Clear Chat
+                                </button>
+                                <span v-else></span>
+                                <span v-if="currentRunId" class="text-gray-400">Ask anything about the schedule</span>
+                            </div>
+                            <div class="relative">
+                                <input v-model="chatInput" @keyup.enter="sendMessage" 
+                                    :disabled="!currentRunId"
+                                    :placeholder="currentRunId ? 'Ask about any constraint or conflict...' : 'Load a schedule first...'"
+                                    :class="{'opacity-50 cursor-not-allowed': !currentRunId}"
+                                    class="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#8C1515] focus:bg-white outline-none transition-all">
+                                <button @click="sendMessage" :disabled="!currentRunId || !chatInput.trim()"
+                                    :class="{'opacity-50 cursor-not-allowed': !currentRunId || !chatInput.trim()}"
+                                    class="absolute right-3 top-2.5 text-[#8C1515] hover:text-[#660000] p-1">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="sidebarTab === 'whatif'" class="flex-grow flex flex-col overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50">
+                            <h3 class="font-bold text-gray-800 text-sm mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-flask text-[#8C1515]"></i> Counterfactual Analysis
+                            </h3>
+                            <p class="text-xs text-gray-600">Test "what-if" scenarios to understand constraints and trade-offs.</p>
+                        </div>
+                        
+                        <div class="flex-grow overflow-y-auto p-4 space-y-4">
+                            <div v-if="!currentRunId || !currentResult || (currentResult.status !== 'optimal' && currentResult.status !== 'time_limit_feasible')" 
+                                class="text-sm text-gray-500 text-center py-8">
+                                <i class="fa-solid fa-info-circle text-2xl text-gray-300 mb-2"></i>
+                                <p>Generate or select a schedule first to run what-if analysis.</p>
+                            </div>
+                            
+                            <div v-else class="space-y-4">
+                                <div class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Query Type</label>
+                                    <select v-model="whatIfQueryType" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select scenario...</option>
+                                        <option value="enforce_time_slot">1. Force course to specific time (week, day, period)</option>
+                                        <option value="veto_time_slot">2. Prevent course at specific time (optional week)</option>
+                                        <option value="veto_day">3. Prevent course on entire day</option>
+                                        <option value="enforce_room">4. Require course to use specific room</option>
+                                        <option value="enforce_before_time">5. All sessions must finish before period</option>
+                                        <option value="enforce_after_time">6. All sessions must start at/after period</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Veto Day -->
+                                <div v-if="whatIfQueryType === 'veto_day'" class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Course or Instructor</label>
+                                    <select v-model="whatIfTargetType" class="w-full p-2 border rounded text-sm mb-2">
+                                        <option value="course">Specific Course</option>
+                                        <option value="instructor">All Instructor's Courses</option>
+                                    </select>
+                                    
+                                    <select v-if="whatIfTargetType === 'course'" v-model="whatIfCourseId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select course...</option>
+                                        <option v-for="c in (currentRunInput?.courses || inputForm.courses)" :key="c.id" :value="c.id">
+                                            {{ c.id }} - {{ c.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <select v-if="whatIfTargetType === 'instructor'" v-model="whatIfInstructorId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select instructor...</option>
+                                        <option v-for="inst in (currentRunInput?.instructors || inputForm.instructors)" :key="inst.id" :value="inst.id">
+                                            {{ inst.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block mt-2">Day to Avoid</label>
+                                    <select v-model="whatIfDay" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select day...</option>
+                                        <option v-for="day in (currentRunInput?.term_config?.days || inputForm.term_config.days)" :key="day" :value="day">
+                                            {{ day }}
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Enforce Time Slot -->
+                                <div v-if="whatIfQueryType === 'enforce_time_slot'" class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Course</label>
+                                    <select v-model="whatIfCourseId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select course...</option>
+                                        <option v-for="c in (currentRunInput?.courses || inputForm.courses)" :key="c.id" :value="c.id">
+                                            {{ c.id }} - {{ c.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Week</label>
+                                    <select v-model.number="whatIfWeek" class="w-full p-2 border rounded text-sm" required>
+                                        <option :value="null">Select week...</option>
+                                        <option v-for="w in (currentRunInput?.term_config?.num_weeks || inputForm.term_config.num_weeks)" :key="w" :value="w-1">
+                                            Week {{ w }} (0-indexed: {{ w-1 }})
+                                        </option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Required: Course must be scheduled at this specific week</p>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Day</label>
+                                    <select v-model="whatIfDay" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select day...</option>
+                                        <option v-for="day in (currentRunInput?.term_config?.days || inputForm.term_config.days)" :key="day" :value="day">
+                                            {{ day }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Time Period</label>
+                                    <select v-model.number="whatIfPeriod" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select period...</option>
+                                        <option v-for="slot in periodSlots" :key="slot.index" :value="slot.index">
+                                            {{ slot.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Veto Time Slot -->
+                                <div v-if="whatIfQueryType === 'veto_time_slot'" class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Course</label>
+                                    <select v-model="whatIfCourseId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select course...</option>
+                                        <option v-for="c in (currentRunInput?.courses || inputForm.courses)" :key="c.id" :value="c.id">
+                                            {{ c.id }} - {{ c.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Week (optional - leave blank for all weeks)</label>
+                                    <select v-model.number="whatIfWeek" class="w-full p-2 border rounded text-sm">
+                                        <option :value="null">All weeks</option>
+                                        <option v-for="w in (currentRunInput?.term_config?.num_weeks || inputForm.term_config.num_weeks)" :key="w" :value="w-1">
+                                            Week {{ w }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Day</label>
+                                    <select v-model="whatIfDay" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select day...</option>
+                                        <option v-for="day in (currentRunInput?.term_config?.days || inputForm.term_config.days)" :key="day" :value="day">
+                                            {{ day }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Time Period</label>
+                                    <select v-model.number="whatIfPeriod" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select period...</option>
+                                        <option v-for="slot in periodSlots" :key="slot.index" :value="slot.index">
+                                            {{ slot.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Enforce Room -->
+                                <div v-if="whatIfQueryType === 'enforce_room'" class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Course</label>
+                                    <select v-model="whatIfCourseId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select course...</option>
+                                        <option v-for="c in (currentRunInput?.courses || inputForm.courses)" :key="c.id" :value="c.id">
+                                            {{ c.id }} - {{ c.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Room</label>
+                                    <select v-model="whatIfRoomId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select room...</option>
+                                        <option v-for="r in (currentRunInput?.classrooms || inputForm.classrooms)" :key="r.id" :value="r.id">
+                                            {{ r.id }} - {{ r.name || r.id }}
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Before/After Time -->
+                                <div v-if="whatIfQueryType === 'enforce_before_time' || whatIfQueryType === 'enforce_after_time'" class="bg-white border rounded-lg p-3 space-y-3">
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Course</label>
+                                    <select v-model="whatIfCourseId" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select course...</option>
+                                        <option v-for="c in (currentRunInput?.courses || inputForm.courses)" :key="c.id" :value="c.id">
+                                            {{ c.id }} - {{ c.name }}
+                                        </option>
+                                    </select>
+                                    
+                                    <label class="text-xs font-bold text-gray-600 uppercase block">Time Period</label>
+                                    <select v-model.number="whatIfPeriod" class="w-full p-2 border rounded text-sm">
+                                        <option value="">Select period...</option>
+                                        <option v-for="slot in periodSlots" :key="slot.index" :value="slot.index">
+                                            {{ slot.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                                
+                                <button @click="runWhatIfAnalysis" :disabled="!canRunWhatIf || whatIfLoading"
+                                    class="w-full bg-[#8C1515] hover:bg-[#660000] text-white px-4 py-3 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                    <span v-if="whatIfLoading" class="animate-spin"><i class="fa-solid fa-circle-notch"></i></span>
+                                    <span v-else><i class="fa-solid fa-flask"></i></span>
+                                    {{ whatIfLoading ? 'Testing...' : 'Test Scenario' }}
+                                </button>
+                                
+                                <!-- Results -->
+                                <div v-if="whatIfResult" class="border-t pt-4 mt-4">
+                                    <div class="bg-gray-50 border rounded-lg p-3 mb-3">
+                                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Result</div>
+                                        <div v-if="whatIfResult.feasible" class="text-sm">
+                                            <div class="flex items-center gap-2 text-green-700 mb-2">
+                                                <i class="fa-solid fa-check-circle"></i>
+                                                <span class="font-bold">Feasible</span>
+                                            </div>
+                                            <div class="text-xs text-gray-600 space-y-1">
+                                                <div>Original objective: {{ whatIfResult.original_objective?.toFixed(2) || 'N/A' }}</div>
+                                                <div>Alternative objective: {{ whatIfResult.alternative_objective?.toFixed(2) || 'N/A' }}</div>
+                                                <div class="font-semibold" :class="whatIfResult.objective_difference >= 0 ? 'text-red-600' : 'text-green-600'">
+                                                    Change: {{ whatIfResult.objective_difference >= 0 ? '+' : '' }}{{ whatIfResult.objective_difference?.toFixed(2) || 'N/A' }}
+                                                </div>
+                                            </div>
+                                            <div v-if="whatIfResult.soft_constraints" class="text-xs text-gray-500 mt-2 pt-2 border-t">
+                                                <div class="font-semibold mb-1">Soft Constraints:</div>
+                                                <div>S1 (Conflicts): {{ whatIfResult.soft_constraints.S1_student_conflicts?.weighted_penalty?.toFixed(2) || '0.00' }}</div>
+                                                <div>S2 (B2B): {{ whatIfResult.soft_constraints.S2_instructor_compactness?.weighted_penalty?.toFixed(2) || '0.00' }}</div>
+                                                <div>S3 (Lunch): {{ whatIfResult.soft_constraints.S3_preferred_time_slots?.weighted_penalty?.toFixed(2) || '0.00' }}</div>
+                                            </div>
+                                            <div v-if="viewingAlternativeSchedule" class="text-xs text-green-600 font-semibold mt-2 mb-2">
+                                                <i class="fa-solid fa-check-circle"></i> Showing alternative schedule on calendar
+                                            </div>
+                                            <div class="flex gap-2 mt-2">
+                                                <button v-if="!viewingAlternativeSchedule" @click="viewWhatIfSchedule" class="text-xs text-[#8C1515] hover:underline font-bold">
+                                                    <i class="fa-solid fa-eye"></i> View Alternative Schedule
+                                                </button>
+                                                <button v-if="viewingAlternativeSchedule" @click="restoreOriginalSchedule" class="text-xs text-blue-600 hover:underline font-bold">
+                                                    <i class="fa-solid fa-undo"></i> Restore Original Schedule
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-sm">
+                                            <div class="flex items-center gap-2 text-red-700 mb-2">
+                                                <i class="fa-solid fa-times-circle"></i>
+                                                <span class="font-bold">Infeasible</span>
+                                            </div>
+                                            <div v-if="whatIfResult.iis_summary" class="text-xs text-gray-600 mb-2">
+                                                {{ whatIfResult.iis_summary.num_constraints_in_iis || 0 }} conflicting constraints
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-white border rounded-lg p-3">
+                                        <div class="text-xs font-bold text-gray-500 uppercase mb-2">Explanation</div>
+                                        <div class="text-sm text-gray-700 whitespace-pre-wrap" v-html="formatMarkdown(whatIfResult.explanation)"></div>
+                                    </div>
+                                    
+                                    <button @click="clearWhatIfResult" class="text-xs text-gray-500 hover:text-gray-700 mt-2">
+                                        <i class="fa-solid fa-times"></i> Clear Result
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="sidebarTab === 'history'" class="flex-grow overflow-y-auto p-3 space-y-2 bg-[#f8fafc]">
+                        <div v-for="run in history" :key="run.run_id" 
+                            @click="loadRun(run.run_id)"
+                            :class="{'bg-white border-[#8C1515] ring-1 ring-red-100 shadow-md': currentRunId === run.run_id, 'bg-white border-gray-200 hover:border-red-200': currentRunId !== run.run_id}"
+                            class="p-4 border rounded-lg cursor-pointer transition-all">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-mono text-gray-400">{{ run.run_id }}</span>
+                                <span :class="{
+                                    'bg-green-100 text-green-700': run.status === 'optimal',
+                                    'bg-blue-100 text-blue-700': run.status === 'time_limit_feasible',
+                                    'bg-yellow-100 text-yellow-700': run.status === 'infeasible',
+                                    'bg-red-100 text-red-700': run.status === 'error'
+                                }" class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">{{ run.status === 'time_limit_feasible' ? 'Time Limit' : run.status }}</span>
+                            </div>
+                            <div class="text-xs text-gray-500">{{ new Date(run.timestamp).toLocaleString() }}</div>
+                            <div v-if="run.status === 'optimal' || run.status === 'time_limit_feasible'" class="text-xs text-gray-400">
+                                Objective: {{ run.objective_value ? Math.round(run.objective_value) : '—' }}
+                            </div>
+                            <div v-else-if="run.status === 'infeasible'" class="text-xs text-yellow-600">No feasible solution</div>
+                            <div v-else-if="run.status === 'error'" class="text-xs text-red-600">Solver error occurred</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-grow flex flex-col bg-white overflow-hidden relative">
+                    <div class="border-b p-4 flex items-center justify-between bg-white shadow-sm z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="flex rounded-md border border-gray-300 overflow-hidden">
+                                <button @click="shiftWeek(-1)" :disabled="weekOffset === 0"
+                                    :class="{'opacity-50 cursor-not-allowed': weekOffset === 0, 'hover:bg-gray-100': weekOffset > 0}"
+                                    class="px-3 py-1.5 bg-gray-50 border-r text-gray-600 text-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button class="px-4 py-1.5 bg-white text-sm font-bold text-gray-700">
+                                    Week {{ weekOffset + 1 }}<span v-if="weekRangeText"> - {{ weekRangeText }}</span>
+                                </button>
+                                <button @click="shiftWeek(1)" :disabled="weekOffset >= (calendarConfig?.num_weeks || 1) - 1"
+                                    :class="{'opacity-50 cursor-not-allowed': weekOffset >= (calendarConfig?.num_weeks || 1) - 1, 'hover:bg-gray-100': weekOffset < (calendarConfig?.num_weeks || 1) - 1}"
+                                    class="px-3 py-1.5 bg-gray-50 border-l text-gray-600 text-sm"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <h2 class="text-xl font-serif font-bold text-gray-800">
+                                <span v-if="semesterTitle">{{ semesterTitle }}</span>
+                                <span v-else>Schedule Visualization</span>
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto relative" id="calendar-container">
+                        <div v-if="role === 'professor' && currentResult && (currentResult.status === 'optimal' || currentResult.status === 'time_limit_feasible')" class="p-4 border-b bg-white">
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm font-semibold text-gray-700">View Schedule for:</label>
+                                <select v-model="viewingProfId" class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-[#8C1515] outline-none">
+                                    <option value="">All Professors</option>
+                                    <option v-for="inst in (currentRunInput?.instructors || inputForm.instructors)" :key="inst.id" :value="inst.id">
+                                        {{ inst.name }} ({{ inst.id }})
+                                    </option>
+                                </select>
+                                <span v-if="viewingProfId" class="text-xs text-gray-500">
+                                    Showing only courses for {{ (currentRunInput?.instructors || inputForm.instructors).find(i => i.id === viewingProfId)?.name || viewingProfId }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div v-if="currentResult" class="p-4 border-b" 
+                            :class="{
+                                'bg-green-50 border-green-200': currentResult.status === 'optimal',
+                                'bg-blue-50 border-blue-200': currentResult.status === 'time_limit_feasible',
+                                'bg-yellow-50 border-yellow-200': currentResult.status === 'infeasible',
+                                'bg-red-50 border-red-200': currentResult.status === 'error'
+                            }">
+                            <div class="flex items-center gap-3">
+                                <div v-if="currentResult.status === 'optimal'" class="text-green-700">
+                                    <i class="fa-solid fa-check-circle text-xl"></i>
+                                </div>
+                                <div v-else-if="currentResult.status === 'time_limit_feasible'" class="text-blue-700">
+                                    <i class="fa-solid fa-clock text-xl"></i>
+                                </div>
+                                <div v-else-if="currentResult.status === 'infeasible'" class="text-yellow-700">
+                                    <i class="fa-solid fa-exclamation-triangle text-xl"></i>
+                                </div>
+                                <div v-else-if="currentResult.status === 'error'" class="text-red-700">
+                                    <i class="fa-solid fa-times-circle text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="font-semibold" 
+                                        :class="{
+                                            'text-green-800': currentResult.status === 'optimal',
+                                            'text-blue-800': currentResult.status === 'time_limit_feasible',
+                                            'text-yellow-800': currentResult.status === 'infeasible',
+                                            'text-red-800': currentResult.status === 'error'
+                                        }">
+                                        <span v-if="currentResult.status === 'optimal'">Optimal Schedule Found</span>
+                                        <span v-else-if="currentResult.status === 'time_limit_feasible'">Good Schedule Found (Time Limit Reached)</span>
+                                        <span v-else-if="currentResult.status === 'infeasible'">Infeasible Problem</span>
+                                        <span v-else-if="currentResult.status === 'error'">Solver Error</span>
+                                    </div>
+                                    <div class="text-sm mt-1"
+                                        :class="{
+                                            'text-green-700': currentResult.status === 'optimal',
+                                            'text-blue-700': currentResult.status === 'time_limit_feasible',
+                                            'text-yellow-700': currentResult.status === 'infeasible',
+                                            'text-red-700': currentResult.status === 'error'
+                                        }">
+                                        <span v-if="currentResult.status === 'optimal' || currentResult.status === 'time_limit_feasible'">
+                                            {{ calendarEvents.length }} course sessions scheduled
+                                            <span v-if="currentResult.objective_value !== null"> • Objective: {{ Math.round(currentResult.objective_value) }}</span>
+                                            <span v-if="currentResult.improvement_summary" class="block mt-1 text-xs italic">
+                                                {{ currentResult.improvement_summary }}
+                                            </span>
+                                        </span>
+                                        <span v-else-if="currentResult.status === 'infeasible'">
+                                            No valid schedule exists that satisfies all hard constraints. Check the AI Assistant for details.
+                                        </span>
+                                        <span v-else-if="currentResult.status === 'error'">
+                                            {{ currentResult.diagnostics?.error || 'An error occurred during optimization' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div v-if="!currentResult" class="flex h-full items-center justify-center flex-col text-gray-400 gap-4">
+                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
+                                <i class="fa-regular fa-calendar"></i>
+                            </div>
+                            <p>No schedule generated yet.</p>
+                        </div>
+
+                        <div v-else-if="currentResult && currentResult.status !== 'optimal' && currentResult.status !== 'time_limit_feasible'" class="flex h-full items-center justify-center flex-col text-gray-500 gap-4 p-8">
+                            <div v-if="currentResult.status === 'infeasible'" class="text-center max-w-2xl">
+                                <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-3xl text-yellow-600 mb-4 mx-auto">
+                                    <i class="fa-solid fa-exclamation-triangle"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-yellow-800 mb-2">Infeasible Problem</h3>
+                                <p class="text-gray-600 mb-4">No valid schedule exists that satisfies all hard constraints.</p>
+                                <div v-if="currentResult.diagnostics?.iis?.length" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
+                                    <p class="font-semibold text-yellow-800 mb-2">Conflicting Constraints (IIS):</p>
+                                    <ul class="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                                        <li v-for="(constraint, idx) in currentResult.diagnostics.iis.slice(0, 10)" :key="idx">{{ constraint }}</li>
+                                        <li v-if="currentResult.diagnostics.iis.length > 10" class="text-yellow-600 italic">... and {{ currentResult.diagnostics.iis.length - 10 }} more</li>
+                                    </ul>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4">Check the AI Assistant tab for a detailed explanation.</p>
+                            </div>
+                            <div v-else-if="currentResult.status === 'error'" class="text-center max-w-2xl">
+                                <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-3xl text-red-600 mb-4 mx-auto">
+                                    <i class="fa-solid fa-times-circle"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-red-800 mb-2">Solver Error</h3>
+                                <p class="text-gray-600 mb-4">An error occurred during optimization.</p>
+                                <div v-if="currentResult.diagnostics?.error" class="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
+                                    <p class="font-semibold text-red-800 mb-2">Error Details:</p>
+                                    <p class="text-sm text-red-700 font-mono break-words">{{ currentResult.diagnostics.error }}</p>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4">Check the AI Assistant tab for more information.</p>
+                            </div>
+                        </div>
+                        
+                        <div v-else-if="currentResult && (currentResult.status === 'optimal' || currentResult.status === 'time_limit_feasible')" class="min-w-[900px] p-4">
+                            <div v-if="currentResult.status === 'time_limit_feasible'" class="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                                <div class="flex items-start gap-2">
+                                    <i class="fa-solid fa-clock mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <strong>Time Limit Reached:</strong> The solver found a good schedule but didn't reach optimality within the 5-minute time limit.
+                                        <div v-if="currentResult.improvement_summary" class="mt-2 text-xs italic">
+                                            {{ currentResult.improvement_summary }}
+                                        </div>
+                                        <div v-if="currentResult.soft_constraint_summary" class="mt-3 space-y-1 text-xs">
+                                            <div class="font-semibold">Soft Constraint Breakdown:</div>
+                                            <div v-if="currentResult.soft_constraint_summary.S1_student_conflicts">
+                                                • Student Conflicts: {{ Math.round(currentResult.soft_constraint_summary.S1_student_conflicts.weighted_penalty) }} (weight: {{ currentResult.soft_constraint_summary.S1_student_conflicts.weight }})
+                                            </div>
+                                            <div v-if="currentResult.soft_constraint_summary.S2_instructor_compactness">
+                                                • Instructor Compactness: {{ Math.round(currentResult.soft_constraint_summary.S2_instructor_compactness.weighted_penalty) }} (weight: {{ currentResult.soft_constraint_summary.S2_instructor_compactness.weight }})
+                                            </div>
+                                            <div v-if="currentResult.soft_constraint_summary.S3_preferred_time_slots">
+                                                • Preferred Time Slots: {{ Math.round(currentResult.soft_constraint_summary.S3_preferred_time_slots.weighted_penalty) }} (weight: {{ currentResult.soft_constraint_summary.S3_preferred_time_slots.weight }})
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="viewingAlternativeSchedule" class="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                                <i class="fa-solid fa-info-circle mr-1"></i>
+                                <strong>Viewing Alternative Schedule:</strong> This is the what-if scenario result. 
+                                <button @click="restoreOriginalSchedule" class="ml-2 text-blue-600 hover:underline font-semibold">Restore Original</button>
+                            </div>
+                            
+                            <div class="flex border-b border-gray-200 pb-2 ml-[75px]">
+                                <div v-for="(day, dayIdx) in calendarDays" :key="day.name" class="flex-1 text-center relative">
+                                    <div class="text-xs font-bold text-gray-400 uppercase">{{ day.name }}</div>
+                                    <div class="text-xl font-light text-gray-800">{{ day.date }}</div>
+                                    <div v-if="day.month" class="text-xs text-gray-500">{{ day.month }}</div>
+                                </div>
+                            </div>
+
+                            <div class="flex relative min-h-[900px] overflow-visible">
+                                <div class="w-[75px] flex-shrink-0 text-xs text-gray-500 text-right pr-2 pt-1 font-medium relative border-r border-gray-200 bg-gray-50 z-0">
+                                    <div v-for="slot in timeSlots" :key="slot.label" 
+                                         class="absolute w-full pr-2 leading-tight whitespace-nowrap text-right z-0" 
+                                         :style="{ top: (slot.top - 10) + 'px' }">
+                                        {{ slot.label }}
+                                    </div>
+                                </div>
+
+                                <div class="flex-grow relative bg-white overflow-visible">
+                                    <!-- Day column separators -->
+                                    <div v-for="(day, dayIdx) in calendarDays" :key="'separator-'+dayIdx"
+                                         class="absolute top-0 bottom-0 border-l-2 border-gray-300 pointer-events-none z-0"
+                                         :style="{ left: `calc(${(dayIdx * (100 / calendarDays.length))}%)` }">
+                                    </div>
+                                    
+                                    <!-- Hour markers (thicker lines every hour) - align with even-indexed slots -->
+                                    <div v-for="(slot, idx) in timeSlots" 
+                                         :key="'hour-'+slot.label"
+                                         v-if="idx % 2 === 0"
+                                         class="absolute left-0 right-0 border-t-2 border-gray-300 pointer-events-none z-0"
+                                         :style="{ top: slot.top + 'px' }">
+                                    </div>
+                                    
+                                    <!-- Half-hour markers (thinner lines) - all slots -->
+                                    <div v-for="slot in timeSlots" 
+                                         :key="'line-'+slot.label" 
+                                         class="absolute left-0 right-0 border-t border-gray-200 pointer-events-none z-0"
+                                         :style="{ top: slot.top + 'px' }">
+                                    </div>
+
+                                    <div v-for="(event, i) in calendarEvents" :key="i"
+                                        class="absolute rounded-lg border-l-4 text-xs transition-all cursor-pointer shadow-sm hover:shadow-xl group overflow-visible flex items-center justify-center p-1"
+                                        :class="event.colorClass"
+                                        :style="{ ...event.style, zIndex: event.isOverlapping ? 20 : 10 }"
+                                        @mouseenter="showTooltip($event, event, i)"
+                                        @mouseleave="hideTooltip(i)">
+                                        
+                                        <!-- Only show course number on the block -->
+                                        <div class="font-bold text-center leading-tight">
+                                            {{ event.courseId || event.courseName }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tooltip container - positioned outside the grid using fixed positioning -->
+                            <div v-if="activeTooltipIndex !== null && calendarEvents[activeTooltipIndex]"
+                                 class="fixed bg-white border-2 border-gray-400 rounded-lg shadow-2xl p-3 min-w-[220px] max-w-[280px] pointer-events-none whitespace-normal"
+                                 :style="getTooltipPosition(calendarEvents[activeTooltipIndex], activeTooltipPosition)">
+                                <div class="text-sm font-bold text-gray-900 mb-2 border-b border-gray-200 pb-1">{{ calendarEvents[activeTooltipIndex].courseName || calendarEvents[activeTooltipIndex].courseId }}</div>
+                                <div class="space-y-1.5 text-xs text-gray-700">
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-door-open w-4 mt-0.5 text-gray-500"></i>
+                                        <span><strong class="text-gray-600">Room:</strong> {{ calendarEvents[activeTooltipIndex].room }}</span>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-user w-4 mt-0.5 text-gray-500"></i>
+                                        <span><strong class="text-gray-600">Instructor:</strong> {{ calendarEvents[activeTooltipIndex].instructor }}</span>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-clock w-4 mt-0.5 text-gray-500"></i>
+                                        <span><strong class="text-gray-600">Time:</strong> {{ calendarEvents[activeTooltipIndex].timeString }}</span>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <i class="fa-solid fa-calendar-day w-4 mt-0.5 text-gray-500"></i>
+                                        <span><strong class="text-gray-600">Day:</strong> {{ calendarEvents[activeTooltipIndex].dayName }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const API_URL = 'http://localhost:8000'; 
+
+        const baseInputTemplate = () => {
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() + (1 - today.getDay())); // Next Monday
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + (10 * 7) - 1); // 10 weeks later
+            
+            return {
+                term_config: {
+                    num_weeks: 10,
+                    days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                    period_length_minutes: 30,
+                    day_start_time: "08:00",
+                    day_end_time: "20:00",
+                    lunch_start_time: "12:00",
+                    lunch_end_time: "12:30",
+                    semester_start_date: startDate.toISOString().split('T')[0],
+                    semester_end_date: endDate.toISOString().split('T')[0]
+                },
+            classrooms: [
+                { id: "Room101", name: "Smith Hall 101", capacity: 100 },
+                { id: "Room102", name: "Gates 102", capacity: 80 }
+            ],
+            instructors: [
+                {
+                    id: "ProfA",
+                    name: "Prof. Anderson",
+                    availability: [
+                        { day: "Mon", period_index: 0 },
+                        { day: "Mon", period_index: 1 },
+                        { day: "Wed", period_index: 2 }
+                    ],
+                    back_to_back_preference: 0,
+                    allow_lunch_teaching: false
+                }
+            ],
+            courses: [
+                {
+                    id: "MSE252",
+                    name: "Decision Analysis",
+                    type: "full_term",
+                    weekly_hours: 1.5,
+                    term_weeks: 10,
+                    instructor_id: "ProfA",
+                    expected_enrollment: 60
+                }
+            ],
+            students: [
+                { id: "S001", name: "Alice", enrolled_course_ids: ["MSE252"] }
+            ],
+            conflict_weights: {
+                global_student_conflict_weight: 50.0,
+                instructor_compactness_weight: 1.0,
+                preferred_time_slots_weight: 1.0
+            }
+            };
+        };
+
+        const decorateForm = (payload) => {
+            const form = JSON.parse(JSON.stringify(payload));
+            form.classrooms = form.classrooms || [];
+            form.instructors = form.instructors || [];
+            form.students = form.students || [];
+            form.courses = form.courses || [];
+            // Ensure conflict_weights exists with all fields
+            if (!form.conflict_weights) {
+                form.conflict_weights = {};
+            }
+            form.conflict_weights.global_student_conflict_weight = form.conflict_weights.global_student_conflict_weight ?? 50.0;
+            form.conflict_weights.instructor_compactness_weight = form.conflict_weights.instructor_compactness_weight ?? 1.0;
+            form.conflict_weights.preferred_time_slots_weight = form.conflict_weights.preferred_time_slots_weight ?? 1.0;
+            form.instructors.forEach(inst => {
+                inst._availabilityJson = JSON.stringify(inst.availability || [], null, 2);
+            });
+            form.students.forEach(student => {
+                student._courseList = (student.enrolled_course_ids || []).join(', ');
+            });
+            return form;
+        };
+
+        createApp({
+            data() {
+                const initial = decorateForm(baseInputTemplate());
+                return {
+                    page: 'input',
+                    role: 'staff',
+                    sidebarTab: 'chat',
+                    loading: false,
+                    activeTooltipIndex: null,
+                    activeTooltipPosition: { x: 0, y: 0 },
+                    staffTabs: [
+                        { id: 'term', label: 'Term Config' },
+                        { id: 'classrooms', label: 'Classrooms' },
+                        { id: 'instructors', label: 'Instructors' },
+                        { id: 'courses', label: 'Courses' },
+                        { id: 'students', label: 'Students' },
+                        { id: 'weights', label: 'Soft Constraint Weights' }
+                    ],
+                    activeStaffTab: 'term',
+                    
+                    inputForm: initial,
+                    inputJson: '',
+                    previewPayload: baseInputTemplate(),
+                    suppressJsonUpdate: false,
+                    
+                    selectedProfId: '',
+                    viewingProfId: '', 
+                    
+                    history: [],
+                    currentRunId: null,
+                    currentResult: null,
+                    currentRunInput: null,
+                    
+                    chatInput: '',
+                    chatMessages: [{ role: 'ai', text: 'Hello! I can help you analyze schedule conflicts and optimization details. Ask me anything about the current schedule!' }],
+                    conversationHistory: [],  // Track conversation for context
+                    
+                    weekOffset: 0,
+                    baseDate: new Date(),
+                    
+                    whatIfQueryType: '',
+                    whatIfTargetType: 'course',
+                    whatIfCourseId: '',
+                    whatIfCourseId2: '',
+                    whatIfInstructorId: '',
+                    whatIfDay: '',
+                    whatIfWeek: null,
+                    whatIfPeriod: null,
+                    whatIfRoomId: '',
+                    whatIfLoading: false,
+                    whatIfResult: null,
+                    viewingAlternativeSchedule: false,
+                    originalScheduleBeforeWhatIf: null
+                };
+            },
+            computed: {
+                termDaysText: {
+                    get() {
+                        return (this.inputForm.term_config.days || []).join(', ');
+                    },
+                    set(value) {
+                        const days = value.split(',').map(d => d.trim()).filter(Boolean);
+                        this.inputForm.term_config.days = days;
+                    }
+                },
+                selectedProf() {
+                    return this.inputForm.instructors.find(p => p.id === this.selectedProfId);
+                },
+                calendarConfig() {
+                    return this.currentRunInput?.term_config || this.previewPayload.term_config;
+                },
+                calendarDays() {
+                    const cfg = this.calendarConfig;
+                    if (!cfg?.days?.length) return [];
+                    
+                    let semesterStart = null;
+                    if (cfg.semester_start_date) {
+                        semesterStart = new Date(cfg.semester_start_date);
+                    } else {
+                        semesterStart = new Date(this.baseDate);
+                        semesterStart.setDate(semesterStart.getDate() - semesterStart.getDay() + 1);
+                    }
+                    
+                    const weekStart = new Date(semesterStart);
+                    weekStart.setDate(semesterStart.getDate() + (this.weekOffset * 7));
+                    
+                    const dayMap = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 0 };
+                    
+                    return cfg.days.map((dayName, idx) => {
+                        const dayOfWeek = dayMap[dayName];
+                        const d = new Date(weekStart);
+                        const dayDiff = dayOfWeek - d.getDay();
+                        d.setDate(d.getDate() + dayDiff);
+                        
+                        return { 
+                            name: dayName, 
+                            date: d.getDate(),
+                            fullDate: d.toISOString().split('T')[0],
+                            month: d.toLocaleDateString('en-US', { month: 'short' }),
+                            dayOfWeek: d.getDay()
+                        };
+                    });
+                },
+                semesterDuration() {
+                    const cfg = this.inputForm.term_config;
+                    if (!cfg.semester_start_date || !cfg.semester_end_date) return null;
+                    const start = new Date(cfg.semester_start_date);
+                    const end = new Date(cfg.semester_end_date);
+                    const diffTime = Math.abs(end - start);
+                    const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+                    return diffWeeks;
+                },
+                isWeeksValid() {
+                    if (!this.semesterDuration) return true;
+                    return this.inputForm.term_config.num_weeks === this.semesterDuration;
+                },
+                isDaysValid() {
+                    const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    const days = this.termDaysText.split(',').map(d => d.trim());
+                    return days.every(d => validDays.includes(d));
+                },
+                timeRangeWarning() {
+                    const cfg = this.inputForm.term_config;
+                    if (!cfg.day_start_time || !cfg.day_end_time) return null;
+                    const start = this.timeToMinutes(cfg.day_start_time);
+                    const end = this.timeToMinutes(cfg.day_end_time);
+                    if (start >= end) return "Day start time must be before day end time";
+                    if (end - start < 60) return "Day must be at least 1 hour long";
+                    return null;
+                },
+                weekRangeText() {
+                    const days = this.calendarDays;
+                    if (!days.length) return null;
+                    const first = days[0];
+                    const last = days[days.length - 1];
+                    if (first.month === last.month) {
+                        return `${first.month} ${first.date}-${last.date}`;
+                    }
+                    return `${first.month} ${first.date} - ${last.month} ${last.date}`;
+                },
+                semesterTitle() {
+                    const cfg = this.calendarConfig;
+                    if (!cfg?.semester_start_date) return null;
+                    const start = new Date(cfg.semester_start_date);
+                    const end = cfg.semester_end_date ? new Date(cfg.semester_end_date) : null;
+                    const startStr = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    if (end) {
+                        const endStr = end.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                        if (start.getMonth() === end.getMonth()) {
+                            return `${startStr}`;
+                        }
+                        return `${startStr} - ${endStr}`;
+                    }
+                    return startStr;
+                },
+                timeSlots() {
+                    const cfg = this.calendarConfig;
+                    if (!cfg) return [];
+                    const start = this.timeToMinutes(cfg.day_start_time || "08:00");
+                    const end = this.timeToMinutes(cfg.day_end_time || "20:00");
+                    const pixelsPerMin = 0.8;
+                    const slots = [];
+                    // Create slots every 30 minutes, aligned to the grid
+                    for (let mins = start; mins <= end; mins += 30) {
+                        const top = (mins - start) * pixelsPerMin;
+                        slots.push({
+                            label: this.minutesToLabel(mins),
+                            top: top,
+                            mins: mins
+                        });
+                    }
+                    return slots;
+                },
+                calendarEvents() {
+                    if (!this.currentResult) return [];
+                    const cfg = this.calendarConfig;
+                    if (!cfg) return [];
+                    
+                    let assignments = [];
+                    // If viewing alternative schedule from what-if, use that
+                    if (this.viewingAlternativeSchedule && this.whatIfResult && this.whatIfResult.alternative_schedule) {
+                        if (this.whatIfResult.alternative_schedule.assignments) {
+                            assignments = Array.isArray(this.whatIfResult.alternative_schedule.assignments) 
+                                ? this.whatIfResult.alternative_schedule.assignments 
+                                : [];
+                        }
+                    } else if (this.currentResult.schedule?.assignments) {
+                        assignments = Array.isArray(this.currentResult.schedule.assignments) 
+                            ? this.currentResult.schedule.assignments 
+                            : [];
+                    } else if (Array.isArray(this.currentResult.assignments)) {
+                        assignments = this.currentResult.assignments;
+                    }
+                    
+                    // If status is optimal or time_limit_feasible but no assignments exist, mark as infeasible
+                    if ((this.currentResult.status === 'optimal' || this.currentResult.status === 'time_limit_feasible') && (!Array.isArray(assignments) || assignments.length === 0)) {
+                        // Update status to infeasible if no assignments found
+                        this.currentResult.status = 'infeasible';
+                        return [];
+                    }
+                    
+                    if (!Array.isArray(assignments) || assignments.length === 0) {
+                        return [];
+                    }
+                    
+                    const currentWeek = this.weekOffset;
+                    assignments = assignments.filter(a => a && a.week === currentWeek);
+                    
+                    if (this.role === 'professor' && this.viewingProfId) {
+                        assignments = assignments.filter(a => a.instructor_id === this.viewingProfId);
+                    }
+                    
+                    // Calls the method which is now correctly placed in 'methods'
+                    const grouped = this._groupAssignmentsBySession(assignments);
+                    
+                    // Debug: log grouped assignments
+                    if (grouped.length > 0) {
+                        console.log("Grouped assignments:", grouped.map(a => ({
+                            course: a.course_name,
+                            week: a.week,
+                            day: a.day,
+                            period_start: a.period_start,
+                            period_length: a.period_length,
+                            room: a.room_name
+                        })));
+                    }
+                    
+                    const startMins = this.timeToMinutes(cfg.day_start_time || "08:00");
+                    const slotMinutes = 30;
+                    const pixelsPerMin = 0.8;
+                    const totalDays = cfg.days.length || 1;
+                    
+                    // Create events with time information for overlap detection
+                    const eventsWithTime = grouped.map(a => {
+                        const periodLength = a.period_length || 1;
+                        const eventStartMins = startMins + (a.period_start * slotMinutes);
+                        const durationMins = periodLength * slotMinutes;
+                        const dayIndex = cfg.days.indexOf(a.day);
+                        const startLabel = this.minutesToLabel(eventStartMins);
+                        const endLabel = this.minutesToLabel(eventStartMins + durationMins);
+                        
+                        return {
+                            assignment: a,
+                            courseName: a.course_name,
+                            courseId: a.course_id || '',
+                            room: a.room_name,
+                            instructor: a.instructor_name,
+                            instructorId: a.instructor_id || '',
+                            timeString: `${startLabel} – ${endLabel}`,
+                            dayIndex: dayIndex,
+                            startMins: eventStartMins,
+                            endMins: eventStartMins + durationMins,
+                            top: (eventStartMins - startMins) * pixelsPerMin,
+                            height: durationMins * pixelsPerMin
+                        };
+                    });
+                    
+                    // Group events by day and detect overlaps
+                    const eventsByDay = {};
+                    eventsWithTime.forEach(event => {
+                        if (!eventsByDay[event.dayIndex]) {
+                            eventsByDay[event.dayIndex] = [];
+                        }
+                        eventsByDay[event.dayIndex].push(event);
+                    });
+                    
+                    // Detect overlaps and assign positions
+                    Object.keys(eventsByDay).forEach(dayIndex => {
+                        const dayEvents = eventsByDay[dayIndex].sort((a, b) => a.startMins - b.startMins);
+                        
+                        // Find overlapping groups
+                        const overlapGroups = [];
+                        dayEvents.forEach(event => {
+                            let placed = false;
+                            for (let group of overlapGroups) {
+                                // Check if this event overlaps with any event in this group
+                                const overlaps = group.some(e => 
+                                    (event.startMins < e.endMins && event.endMins > e.startMins)
+                                );
+                                if (overlaps) {
+                                    group.push(event);
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                            if (!placed) {
+                                overlapGroups.push([event]);
+                            }
+                        });
+                        
+                        // Assign positions within each overlap group
+                        overlapGroups.forEach(group => {
+                            const groupSize = group.length;
+                            group.forEach((event, index) => {
+                                event.overlapIndex = index;
+                                event.overlapCount = groupSize;
+                                event.overlapWidth = 100 / groupSize;
+                                event.overlapLeft = (100 / groupSize) * index;
+                            });
+                        });
+                    });
+                    
+                    // Get unique instructors and assign colors
+                    const instructors = [...new Set(eventsWithTime.map(e => e.instructor))];
+                    const colorPalette = [
+                        { bg: 'from-blue-50 to-blue-100', border: 'border-blue-500', text: 'text-blue-900' },
+                        { bg: 'from-green-50 to-green-100', border: 'border-green-500', text: 'text-green-900' },
+                        { bg: 'from-purple-50 to-purple-100', border: 'border-purple-500', text: 'text-purple-900' },
+                        { bg: 'from-orange-50 to-orange-100', border: 'border-orange-500', text: 'text-orange-900' },
+                        { bg: 'from-pink-50 to-pink-100', border: 'border-pink-500', text: 'text-pink-900' },
+                        { bg: 'from-indigo-50 to-indigo-100', border: 'border-indigo-500', text: 'text-indigo-900' },
+                        { bg: 'from-teal-50 to-teal-100', border: 'border-teal-500', text: 'text-teal-900' },
+                        { bg: 'from-red-50 to-red-100', border: 'border-red-500', text: 'text-red-900' },
+                        { bg: 'from-yellow-50 to-yellow-100', border: 'border-yellow-500', text: 'text-yellow-900' },
+                        { bg: 'from-cyan-50 to-cyan-100', border: 'border-cyan-500', text: 'text-cyan-900' }
+                    ];
+                    const instructorColorMap = {};
+                    instructors.forEach((inst, idx) => {
+                        instructorColorMap[inst] = colorPalette[idx % colorPalette.length];
+                    });
+                    
+                    // Convert to final event format with proper positioning
+                    return eventsWithTime.map(event => {
+                        const dayIndex = event.dayIndex;
+                        const baseLeft = (dayIndex * (100 / totalDays));
+                        const dayWidth = (100 / totalDays);
+                        
+                        // Get color for this instructor
+                        const color = instructorColorMap[event.instructor] || colorPalette[0];
+                        
+                        // If event is part of an overlap group, adjust width and position
+                        let left, width;
+                        if (event.overlapCount > 1) {
+                            // Stack horizontally within the day column - use appropriate width
+                            const overlapWidthPercent = 100 / event.overlapCount;
+                            width = `calc(${dayWidth}% * ${overlapWidthPercent / 100} - 6px)`;
+                            left = `calc(${baseLeft}% + ${(dayWidth * event.overlapLeft / 100)}% + 3px)`;
+                        } else {
+                            // Full width of day column with proper padding
+                            width = `calc(${dayWidth}% - 8px)`;
+                            left = `calc(${baseLeft}% + 4px)`;
+                        }
+                        
+                        return {
+                            courseName: event.courseName,
+                            courseId: event.courseId || event.assignment?.course_id || '',
+                            room: event.room,
+                            instructor: event.instructor,
+                            instructorId: event.assignment?.instructor_id || '',
+                            timeString: event.timeString,
+                            overlapCount: event.overlapCount || 1,
+                            isOverlapping: (event.overlapCount || 1) > 1,
+                            dayIndex: dayIndex,
+                            dayName: cfg.days[dayIndex],
+                            colorClass: `bg-gradient-to-br ${color.bg} ${color.border} ${color.text}`,
+                            style: {
+                                top: `${event.top}px`,
+                                height: `${event.height}px`,
+                                left: left,
+                                width: width,
+                                zIndex: event.isOverlapping ? 10 : 5
+                            }
+                        };
+                    });
+                },
+                periodSlots() {
+                    const cfg = this.previewPayload.term_config;
+                    if (!cfg) return [];
+                    const start = this.timeToMinutes(cfg.day_start_time || "08:00");
+                    const end = this.timeToMinutes(cfg.day_end_time || "18:00");
+                    const slots = [];
+                    let index = 0;
+                    for (let mins = start; mins < end; mins += 30) {
+                        slots.push({ index, label: this.minutesToLabel(mins) });
+                        index += 1;
+                    }
+                    return slots;
+                },
+                canRunWhatIf() {
+                    if (!this.whatIfQueryType) return false;
+                    
+                    if (this.whatIfQueryType === 'veto_day') {
+                        if (this.whatIfTargetType === 'course') {
+                            return this.whatIfCourseId && this.whatIfDay;
+                        } else {
+                            return this.whatIfInstructorId && this.whatIfDay;
+                        }
+                    } else if (this.whatIfQueryType === 'enforce_time_slot') {
+                        return this.whatIfCourseId && this.whatIfDay && this.whatIfPeriod !== null && this.whatIfWeek !== null;
+                    } else if (this.whatIfQueryType === 'veto_time_slot') {
+                        return this.whatIfCourseId && this.whatIfDay && this.whatIfPeriod !== null;
+                    } else if (this.whatIfQueryType === 'enforce_room') {
+                        return this.whatIfCourseId && this.whatIfRoomId;
+                    } else if (this.whatIfQueryType === 'enforce_before_time' || this.whatIfQueryType === 'enforce_after_time') {
+                        return this.whatIfCourseId && this.whatIfPeriod !== null;
+                    }
+                    
+                    return false;
+                }
+            },
+            watch: {
+                inputForm: {
+                    deep: true,
+                    handler() {
+                        if (this.suppressJsonUpdate) return;
+                        this.updateJsonMirror();
+                    }
+                }
+            },
+            mounted() {
+                this.updateJsonMirror();
+                this.loadHistory();
+            },
+            methods: {
+                getOverlapCountForDay(dayIndex) {
+                    // Count how many time slots have overlapping courses for this day
+                    if (!this.calendarEvents) return 0;
+                    
+                    // Get events for this day that are overlapping
+                    const dayEvents = this.calendarEvents.filter(e => e.dayIndex === dayIndex && e.isOverlapping);
+                    if (dayEvents.length === 0) return 0;
+                    
+                    // Count unique overlap groups (time slots) for this day
+                    // Events in the same overlap group will have the same top position
+                    const overlapSlots = new Set();
+                    dayEvents.forEach(event => {
+                        // Use top position rounded to nearest 5px to identify unique time slots
+                        const slotKey = Math.round(parseFloat(event.style.top) / 5) * 5;
+                        overlapSlots.add(slotKey);
+                    });
+                    
+                    return overlapSlots.size;
+                },
+                showTooltip(event, courseEvent, index) {
+                    // Use nextTick to ensure DOM is updated
+                    this.$nextTick(() => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        const totalDays = this.calendarDays?.length || 5;
+                        const isLastDay = courseEvent.dayIndex === totalDays - 1;
+                        
+                        // Calculate position - prefer right side, but use left if near right edge
+                        let x, y;
+                        const tooltipWidth = 280; // Max width from CSS
+                        const margin = 12;
+                        
+                        if (isLastDay || courseEvent.isOverlapping) {
+                            // Show on the left side
+                            x = rect.left - tooltipWidth - margin;
+                        } else {
+                            // Show on the right side
+                            x = rect.right + margin;
+                        }
+                        
+                        // Ensure tooltip doesn't go off screen horizontally
+                        if (x < margin) {
+                            x = rect.right + margin; // Switch to right if left would be off-screen
+                        } else if (x + tooltipWidth > window.innerWidth - margin) {
+                            x = rect.left - tooltipWidth - margin; // Switch to left if right would be off-screen
+                        }
+                        
+                        // Position vertically aligned with the top of the course block
+                        y = rect.top;
+                        
+                        // Ensure tooltip doesn't go off top or bottom
+                        const tooltipHeight = 180; // Approximate tooltip height
+                        if (y < margin) {
+                            y = margin;
+                        } else if (y + tooltipHeight > window.innerHeight - margin) {
+                            y = window.innerHeight - tooltipHeight - margin;
+                        }
+                        
+                        this.activeTooltipPosition = { x, y };
+                        this.activeTooltipIndex = index;
+                    });
+                },
+                hideTooltip(index) {
+                    if (this.activeTooltipIndex === index) {
+                        this.activeTooltipIndex = null;
+                    }
+                },
+                getTooltipPosition(event, position) {
+                    if (!position || position.x === undefined || position.y === undefined) {
+                        return { display: 'none' };
+                    }
+                    return {
+                        left: position.x + 'px',
+                        top: position.y + 'px',
+                        zIndex: '99999',
+                        position: 'fixed'
+                    };
+                },
+                // MOVED HERE: This function belongs in methods, not computed
+                _groupAssignmentsBySession(assignments) {
+                    if (!Array.isArray(assignments)) {
+                        return [];
+                    }
+
+                    // If assignments already have period_length > 1, they're already grouped correctly
+                    // Just deduplicate by (course_id, week, day, room_id, period_start)
+                    const seen = new Map();
+                    const deduplicated = [];
+                    
+                    for (const a of assignments) {
+                        const key = `${a.course_id}_${a.week}_${a.day}_${a.room_id}_${a.period_start}`;
+                        if (!seen.has(key)) {
+                            seen.set(key, a);
+                            deduplicated.push(a);
+                        }
+                    }
+                    
+                    // If all assignments have period_length > 1, return deduplicated
+                    const allMultiPeriod = deduplicated.every(a => (a.period_length || 1) > 1);
+                    if (allMultiPeriod) {
+                        return deduplicated;
+                    }
+                    
+                    // Otherwise, group consecutive periods (for period_length=1 case)
+                    const groups = new Map();
+                    for (const a of deduplicated) {
+                        const key = `${a.course_id}_${a.week}_${a.day}_${a.room_id}`;
+                        if (!groups.has(key)) {
+                            groups.set(key, []);
+                        }
+                        groups.get(key).push(a);
+                    }
+                    
+                    const merged = [];
+                    for (const [key, group] of groups) {
+                        group.sort((a, b) => a.period_start - b.period_start);
+                        
+                        let current = {...group[0]}; // Copy to avoid mutation
+                        for (let i = 1; i < group.length; i++) {
+                            const next = group[i];
+                            const currentEnd = current.period_start + (current.period_length || 1);
+                            
+                            if (next.period_start === currentEnd) {
+                                // Consecutive - merge
+                                current.period_length = (current.period_length || 1) + (next.period_length || 1);
+                            } else {
+                                // Not consecutive - save current and start new
+                                merged.push(current);
+                                current = {...next};
+                            }
+                        }
+                        merged.push(current);
+                    }
+                    
+                    return merged;
+                },
+                timeToMinutes(timeStr) {
+                    const [h, m] = timeStr.split(':').map(Number);
+                    return h * 60 + m;
+                },
+                minutesToLabel(totalMins) {
+                    let mins = totalMins % 60;
+                    let hours = Math.floor(totalMins / 60);
+                    const suffix = hours >= 12 ? 'PM' : 'AM';
+                    if (hours === 0) hours = 12;
+                    if (hours > 12) hours -= 12;
+                    // Format with proper spacing to prevent cutoff
+                    return `${hours}:${mins.toString().padStart(2, '0')} ${suffix}`;
+                },
+                loadSampleData() {
+                    this.suppressJsonUpdate = true;
+                    this.inputForm = decorateForm(baseInputTemplate());
+                    this.selectedProfId = '';
+                    this.$nextTick(() => {
+                        this.suppressJsonUpdate = false;
+                        this.updateJsonMirror();
+                    });
+                },
+                updateJsonMirror() {
+                    const payload = this.preparePayload();
+                    this.previewPayload = payload;
+                    this.inputJson = JSON.stringify(payload, null, 2);
+                },
+                preparePayload() {
+                    const clone = JSON.parse(JSON.stringify(this.inputForm));
+                    clone.term_config.period_length_minutes = 30;
+                    (clone.students || []).forEach(student => {
+                        student.enrolled_course_ids = student.enrolled_course_ids || [];
+                        delete student._courseList;
+                    });
+                    (clone.instructors || []).forEach(inst => {
+                        delete inst._availabilityJson;
+                    });
+                    // Ensure all soft constraint weights are present with defaults
+                    if (!clone.conflict_weights) {
+                        clone.conflict_weights = {};
+                    }
+                    clone.conflict_weights.global_student_conflict_weight = clone.conflict_weights.global_student_conflict_weight ?? 50.0;
+                    clone.conflict_weights.instructor_compactness_weight = clone.conflict_weights.instructor_compactness_weight ?? 1.0;
+                    clone.conflict_weights.preferred_time_slots_weight = clone.conflict_weights.preferred_time_slots_weight ?? 1.0;
+                    return clone;
+                },
+                applyJsonToForm() {
+                    try {
+                        const parsed = JSON.parse(this.inputJson);
+                        this.suppressJsonUpdate = true;
+                        this.inputForm = decorateForm(parsed);
+                        this.$nextTick(() => {
+                            this.suppressJsonUpdate = false;
+                            this.updateJsonMirror();
+                        });
+                    } catch (err) {
+                        alert("Invalid JSON: " + err.message);
+                    }
+                },
+                addClassroom() {
+                    this.inputForm.classrooms.push({ id: '', name: '', capacity: 0 });
+                },
+                removeClassroom(idx) {
+                    this.inputForm.classrooms.splice(idx, 1);
+                },
+                addInstructor() {
+                    this.inputForm.instructors.push({
+                        id: '',
+                        name: '',
+                        availability: [],
+                        back_to_back_preference: 0,
+                        allow_lunch_teaching: false,
+                        _availabilityJson: "[]"
+                    });
+                },
+                removeInstructor(idx) {
+                    if (this.selectedProfId === this.inputForm.instructors[idx]?.id) {
+                        this.selectedProfId = '';
+                    }
+                    this.inputForm.instructors.splice(idx, 1);
+                },
+                syncAvailabilityFromJson(inst) {
+                    try {
+                        const parsed = JSON.parse(inst._availabilityJson || "[]");
+                        inst.availability = parsed;
+                    } catch {
+                        alert("Availability must be a valid JSON array.");
+                    }
+                },
+                addCourse() {
+                    this.inputForm.courses.push({
+                        id: '',
+                        name: '',
+                        type: 'full_term',
+                        weekly_hours: 1.5,
+                        term_weeks: this.inputForm.term_config.num_weeks,
+                        instructor_id: '',
+                        expected_enrollment: 0
+                    });
+                },
+                removeCourse(idx) {
+                    this.inputForm.courses.splice(idx, 1);
+                },
+                addStudent() {
+                    this.inputForm.students.push({
+                        id: '',
+                        name: '',
+                        enrolled_course_ids: [],
+                        _courseList: ''
+                    });
+                },
+                removeStudent(idx) {
+                    this.inputForm.students.splice(idx, 1);
+                },
+                syncStudentCourses(student) {
+                    student.enrolled_course_ids = (student._courseList || '')
+                        .split(',')
+                        .map(id => id.trim())
+                        .filter(Boolean);
+                },
+                toggleStudentCourse(student, courseId) {
+                    student.enrolled_course_ids = student.enrolled_course_ids || [];
+                    const idx = student.enrolled_course_ids.indexOf(courseId);
+                    if (idx >= 0) {
+                        student.enrolled_course_ids.splice(idx, 1);
+                    } else {
+                        student.enrolled_course_ids.push(courseId);
+                    }
+                },
+                isSlotAvailable(day, slotIndex) {
+                    if (!this.selectedProf) return false;
+                    return (this.selectedProf.availability || []).some(s => s.day === day && s.period_index === slotIndex);
+                },
+                toggleAvailability(day, slotIndex) {
+                    if (!this.selectedProf) return;
+                    this.selectedProf.availability = this.selectedProf.availability || [];
+                    const idx = this.selectedProf.availability.findIndex(s => s.day === day && s.period_index === slotIndex);
+                    if (idx >= 0) this.selectedProf.availability.splice(idx, 1);
+                    else this.selectedProf.availability.push({ day, period_index: slotIndex });
+                    this.selectedProf._availabilityJson = JSON.stringify(this.selectedProf.availability, null, 2);
+                },
+                async runOptimization() {
+                    this.loading = true;
+                    try {
+                        const payload = this.preparePayload();
+                        const res = await fetch(`${API_URL}/optimize`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({}));
+                            throw new Error(errorData.detail || "Optimization failed");
+                        }
+                        const data = await res.json();
+                        this.currentRunId = data.run_id;
+                        
+                        this.page = 'output';
+                        await this.$nextTick(); 
+                        
+                        await this.loadHistory();
+                        await this.loadRun(data.run_id);
+                        
+                        if (data.status === "error" && data.error_message) {
+                            this.chatMessages.push({
+                                role: 'ai',
+                                text: `❌ Error: ${data.error_message}\n\nThis indicates a problem with the solver or input data, not an infeasible problem.`
+                            });
+                        }
+                        
+                        await this.autoGenerateExplanation();
+                        
+                    } catch (err) {
+                        console.error("Optimization error:", err);
+                        this.chatMessages.push({
+                            role: 'ai',
+                            text: `❌ Failed to run optimization: ${err.message}`
+                        });
+                        alert("Error: " + err.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async autoGenerateExplanation() {
+                    if (!this.currentRunId) return;
+                    
+                    try {
+                        let question = "Explain this schedule result.";
+                        if (this.currentResult) {
+                            if (this.currentResult.status === "optimal") {
+                                question = "Explain this schedule: Is it feasible? How were the objectives optimized? What constraints were satisfied?";
+                            } else if (this.currentResult.status === "time_limit_feasible") {
+                                question = "Explain this schedule: The solver reached the time limit but found a good solution. What is the objective value and how much improvement was achieved? What soft constraints were optimized?";
+                            } else if (this.currentResult.status === "infeasible") {
+                                question = "Why is this schedule infeasible? What constraints are conflicting? Which constraints in the IIS are causing the problem?";
+                            } else if (this.currentResult.status === "error") {
+                                question = "What went wrong? Explain the error and what might have caused it.";
+                            }
+                        }
+                        
+                        const res = await fetch(`${API_URL}/explain`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ run_id: this.currentRunId, question: question })
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.chatMessages.push({
+                                role: 'ai',
+                                text: data.explanation
+                            });
+                        } else {
+                            this.generateFallbackExplanation();
+                        }
+                    } catch (err) {
+                        this.generateFallbackExplanation();
+                    }
+                },
+                generateFallbackExplanation() {
+                    if (!this.currentResult) return;
+                    
+                    let explanation = "";
+                    if (this.currentResult.status === "optimal" || this.currentResult.status === "time_limit_feasible") {
+                        const assignments = this.currentResult.schedule?.assignments || [];
+                        const isOptimal = this.currentResult.status === "optimal";
+                        explanation = isOptimal ? `✅ **Optimal Schedule Found**\n\n` : `⏱️ **Good Schedule Found (Time Limit Reached)**\n\n`;
+                        explanation += `The optimization ${isOptimal ? 'successfully' : 'found a good'} schedule with ${assignments.length} course assignments.\n\n`;
+                        if (this.currentResult.objective_value !== null) {
+                            explanation += `Objective Value: ${Math.round(this.currentResult.objective_value)}\n`;
+                        }
+                        if (this.currentResult.improvement_summary) {
+                            explanation += `\n${this.currentResult.improvement_summary}\n\n`;
+                        }
+                        if (this.currentResult.soft_constraint_summary) {
+                            explanation += `Soft Constraint Summary:\n`;
+                            for (const [key, value] of Object.entries(this.currentResult.soft_constraint_summary)) {
+                                const penalty = value.weighted_penalty ? Math.round(value.weighted_penalty) : 0;
+                                explanation += `- ${key}: ${penalty} (weight: ${value.weight})\n`;
+                            }
+                        }
+                        if (!isOptimal) {
+                            explanation += `\n⚠️ Note: The solver reached the 5-minute time limit before finding the optimal solution. This schedule is feasible and satisfies all hard constraints, but may not be the absolute best possible schedule.`;
+                        }
+                    } else if (this.currentResult.status === "infeasible") {
+                        explanation = `❌ **Infeasible Problem**\n\n`;
+                        explanation += `No valid schedule exists that satisfies all hard constraints.\n\n`;
+                        const iis = this.currentResult.diagnostics?.iis || [];
+                        if (iis.length > 0) {
+                            explanation += `**Conflicting Constraints (IIS):**\n`;
+                            iis.slice(0, 5).forEach(constraint => {
+                                explanation += `- ${constraint}\n`;
+                            });
+                            if (iis.length > 5) {
+                                explanation += `... and ${iis.length - 5} more\n`;
+                            }
+                        }
+                        const violations = this.currentResult.diagnostics?.room_capacity_violations || [];
+                        if (violations.length > 0) {
+                            explanation += `\n**Room Capacity Issues:**\n`;
+                            violations.forEach(v => {
+                                explanation += `- ${v.course_name || v.course_id}: ${v.enrollment} students, but room capacity is ${v.room_capacity}\n`;
+                            });
+                        }
+                    } else if (this.currentResult.status === "error") {
+                        const errorMsg = this.currentResult.diagnostics?.error || "Unknown error";
+                        explanation = `❌ **Error Occurred**\n\n`;
+                        explanation += `Error: ${errorMsg}\n\n`;
+                        explanation += `This indicates a problem with the solver or input data processing, not an infeasible problem.`;
+                    }
+                    
+                    if (explanation) {
+                        this.chatMessages.push({
+                            role: 'ai',
+                            text: explanation
+                        });
+                    }
+                },
+                async loadHistory() {
+                    try {
+                        const res = await fetch(`${API_URL}/runs?limit=25`);
+                        this.history = await res.json();
+                    } catch {
+                        this.history = [];
+                    }
+                },
+                async loadRun(runId) {
+                    this.currentRunId = runId;
+                    try {
+                        const res = await fetch(`${API_URL}/runs/${runId}`);
+                        if (!res.ok) throw new Error("Run not found");
+                        const data = await res.json();
+                        
+                        // FIX: Strict data sanitization
+                        if (!data.output) data.output = {};
+                        if (!data.output.schedule) data.output.schedule = {};
+                        
+                        let assignments = data.output.schedule.assignments;
+                        
+                        // Fallback check
+                        if (!Array.isArray(assignments)) {
+                            assignments = data.assignments;
+                        }
+
+                        // Strict enforcement: Must be array
+                        if (!Array.isArray(assignments)) {
+                            assignments = [];
+                        }
+
+                        // Write back
+                        data.output.schedule.assignments = assignments;
+                        
+                        // If status is optimal or time_limit_feasible but no assignments exist, mark as infeasible
+                        if ((data.output.status === 'optimal' || data.output.status === 'time_limit_feasible') && (!Array.isArray(assignments) || assignments.length === 0)) {
+                            console.warn('Status is ' + data.output.status + ' but no assignments found - marking as infeasible');
+                            data.output.status = 'infeasible';
+                            data.output.diagnostics = data.output.diagnostics || {};
+                            data.output.diagnostics.infeasibility_explanation = 'No valid schedule assignments found despite ' + data.output.status + ' status';
+                        }
+                        
+                        this.currentResult = data.output;
+                        this.currentRunInput = data.input;
+                        
+                        // Clear conversation history when loading a new run
+                        this.conversationHistory = [];
+                        
+                        await this.$nextTick();
+                        
+                        if (data.input?.term_config?.semester_start_date) {
+                            this.baseDate = new Date(data.input.term_config.semester_start_date);
+                        }
+                        this.weekOffset = 0; 
+                        
+                        if (this.role === 'professor' && !this.viewingProfId && data.input?.instructors?.length > 0) {
+                            this.viewingProfId = data.input.instructors[0].id;
+                        }
+                        
+                        if (data.output?.status === "error" && data.output?.diagnostics?.error) {
+                            const errorMsg = data.output.diagnostics.error;
+                            const hasError = this.chatMessages.some(msg => 
+                                msg.role === 'ai' && msg.text.includes(errorMsg.substring(0, 50))
+                            );
+                            if (!hasError) {
+                                this.chatMessages.push({
+                                    role: 'ai',
+                                    text: `❌ **Error in this run:**\n\n${errorMsg}\n\nThis indicates a problem with the solver or input data processing.`
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Failed to load run:", err);
+                        alert("Failed to load run: " + err.message);
+                    }
+                },
+                async sendMessage() {
+                    if (!this.chatInput.trim()) return;
+                    
+                    if (!this.currentRunId) {
+                        this.chatMessages.push({ role: 'ai', text: "Please generate or load a schedule first to ask questions." });
+                        this.chatInput = '';
+                        return;
+                    }
+                    
+                    const text = this.chatInput.trim();
+                    const userMessage = { role: 'user', text };
+                    this.chatMessages.push(userMessage);
+                    
+                    // Add to conversation history
+                    this.conversationHistory.push({ role: 'user', content: text });
+                    
+                    this.chatInput = '';
+                    
+                    const typingMsg = { role: 'ai', text: '...', isTyping: true };
+                    this.chatMessages.push(typingMsg);
+                    
+                    try {
+                        // Use new interactive chat endpoint
+                        const res = await fetch(`${API_URL}/chat`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                run_id: this.currentRunId, 
+                                message: text,
+                                conversation_history: this.conversationHistory.slice(-10)  // Last 10 messages for context
+                            })
+                        });
+                        
+                        const typingIdx = this.chatMessages.indexOf(typingMsg);
+                        if (typingIdx >= 0) this.chatMessages.splice(typingIdx, 1);
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            const aiResponse = { role: 'ai', text: data.response };
+                            this.chatMessages.push(aiResponse);
+                            
+                            // Add to conversation history
+                            this.conversationHistory.push({ role: 'assistant', content: data.response });
+                        } else {
+                            const errorData = await res.json().catch(() => ({}));
+                            const errorMsg = `Sorry, I couldn't process your question. ${errorData.detail || 'Please try again.'}`;
+                            this.chatMessages.push({ role: 'ai', text: errorMsg });
+                            this.conversationHistory.push({ role: 'assistant', content: errorMsg });
+                        }
+                    } catch (err) {
+                        const typingIdx = this.chatMessages.indexOf(typingMsg);
+                        if (typingIdx >= 0) this.chatMessages.splice(typingIdx, 1);
+                        
+                        const errorMsg = "Chat service is currently unavailable. Please check your connection and try again.";
+                        this.chatMessages.push({ role: 'ai', text: errorMsg });
+                        this.conversationHistory.push({ role: 'assistant', content: errorMsg });
+                    }
+                },
+                shiftWeek(delta) {
+                    const cfg = this.calendarConfig;
+                    const maxWeeks = cfg?.num_weeks || 1;
+                    this.weekOffset = Math.max(0, Math.min(maxWeeks - 1, this.weekOffset + delta));
+                },
+                updateSemesterDates() {
+                    const cfg = this.inputForm.term_config;
+                    if (cfg.semester_start_date && cfg.semester_end_date) {
+                        const start = new Date(cfg.semester_start_date);
+                        const end = new Date(cfg.semester_end_date);
+                        const diffTime = Math.abs(end - start);
+                        const calculatedWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+                        if (calculatedWeeks > 0 && calculatedWeeks !== cfg.num_weeks) {
+                            if (confirm(`Semester duration is ${calculatedWeeks} weeks. Update number of weeks?`)) {
+                                cfg.num_weeks = calculatedWeeks;
+                            }
+                        }
+                    }
+                },
+                validateWeeks() {
+                    this.$forceUpdate();
+                },
+                validateDays() {
+                    this.$forceUpdate();
+                },
+                validateTimeRange() {
+                    this.$forceUpdate();
+                },
+                validateLunchTime() {
+                    const cfg = this.inputForm.term_config;
+                    if (cfg.lunch_start_time && cfg.lunch_end_time) {
+                        const lunchStart = this.timeToMinutes(cfg.lunch_start_time);
+                        const lunchEnd = this.timeToMinutes(cfg.lunch_end_time);
+                        const dayStart = this.timeToMinutes(cfg.day_start_time || "08:00");
+                        const dayEnd = this.timeToMinutes(cfg.day_end_time || "18:00");
+                        
+                        if (lunchStart < dayStart || lunchEnd > dayEnd) {
+                            alert("Lunch time must be within day start and end times");
+                        }
+                    }
+                },
+                async runWhatIfAnalysis() {
+                    if (!this.currentRunId) {
+                        alert("Please load a schedule first");
+                        return;
+                    }
+                    
+                    this.whatIfLoading = true;
+                    this.whatIfResult = null;
+                    
+                    try {
+                        const queryParams = {};
+                        
+                        if (this.whatIfQueryType === 'veto_day') {
+                            if (this.whatIfTargetType === 'course') {
+                                queryParams.course_id = this.whatIfCourseId;
+                            } else {
+                                queryParams.instructor_id = this.whatIfInstructorId;
+                            }
+                            queryParams.day = this.whatIfDay;
+                        } else if (this.whatIfQueryType === 'enforce_time_slot') {
+                            queryParams.course_id = this.whatIfCourseId;
+                            queryParams.day = this.whatIfDay;
+                            queryParams.period_start = this.whatIfPeriod;
+                            // Week is required for enforce_time_slot
+                            queryParams.week = this.whatIfWeek;
+                        } else if (this.whatIfQueryType === 'veto_time_slot') {
+                            queryParams.course_id = this.whatIfCourseId;
+                            queryParams.day = this.whatIfDay;
+                            queryParams.period_start = this.whatIfPeriod;
+                            // Week is optional for veto_time_slot (if null, vetoes all weeks)
+                            if (this.whatIfWeek !== null) {
+                                queryParams.week = this.whatIfWeek;
+                            }
+                        } else if (this.whatIfQueryType === 'enforce_room') {
+                            queryParams.course_id = this.whatIfCourseId;
+                            queryParams.room_id = this.whatIfRoomId;
+                        } else if (this.whatIfQueryType === 'enforce_before_time') {
+                            queryParams.course_id = this.whatIfCourseId;
+                            queryParams.period_before = this.whatIfPeriod;
+                        } else if (this.whatIfQueryType === 'enforce_after_time') {
+                            queryParams.course_id = this.whatIfCourseId;
+                            queryParams.period_after = this.whatIfPeriod;
+                        }
+                        
+                        const res = await fetch(`${API_URL}/what-if`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                run_id: this.currentRunId,
+                                query_type: this.whatIfQueryType,
+                                query_params: queryParams
+                            })
+                        });
+                        
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({}));
+                            throw new Error(errorData.detail || "What-if analysis failed");
+                        }
+                        
+                        const data = await res.json();
+                        this.whatIfResult = data;
+                        
+                        console.log("What-if result:", data);
+                        
+                        // If feasible, automatically show the alternative schedule
+                        if (data.feasible && data.alternative_schedule) {
+                            this.showAlternativeSchedule();
+                        }
+                        
+                    } catch (err) {
+                        console.error("What-if analysis error:", err);
+                        alert("Error: " + err.message);
+                    } finally {
+                        this.whatIfLoading = false;
+                    }
+                },
+                clearWhatIfResult() {
+                    this.whatIfResult = null;
+                    this.viewingAlternativeSchedule = false;
+                    this.originalScheduleBeforeWhatIf = null;
+                },
+                showAlternativeSchedule() {
+                    if (!this.whatIfResult || !this.whatIfResult.alternative_schedule) {
+                        return;
+                    }
+                    
+                    // Store original schedule if not already stored
+                    if (!this.viewingAlternativeSchedule) {
+                        this.originalScheduleBeforeWhatIf = JSON.parse(JSON.stringify(this.currentResult));
+                    }
+                    
+                    // Mark that we're viewing alternative schedule
+                    this.viewingAlternativeSchedule = true;
+                },
+                viewWhatIfSchedule() {
+                    this.showAlternativeSchedule();
+                },
+                restoreOriginalSchedule() {
+                    if (this.originalScheduleBeforeWhatIf) {
+                        this.currentResult = this.originalScheduleBeforeWhatIf;
+                        this.viewingAlternativeSchedule = false;
+                        this.originalScheduleBeforeWhatIf = null;
+                    }
+                },
+                formatMarkdown(text) {
+                    if (!text) return '';
+                    
+                    // Simple markdown formatting
+                    return text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                        .replace(/^#{1,6}\s+(.*)$/gm, '<h3 class="font-bold mt-2 mb-1">$1</h3>')
+                        .replace(/\n/g, '<br>');
+                },
+                clearChat() {
+                    // Keep only the initial welcome message
+                    this.chatMessages = [{ 
+                        role: 'ai', 
+                        text: 'Hello! I can help you analyze schedule conflicts and optimization details. Ask me anything about the current schedule!' 
+                    }];
+                    this.conversationHistory = [];
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
