@@ -1,0 +1,171 @@
+{
+  "filename": "schedule_input_099",
+  "initial_score": 55524.0,
+  "checkpoints": [
+    {
+      "time": 0,
+      "objective": 55524.0,
+      "pct_reduced": 0.0
+    },
+    {
+      "time": 1050,
+      "objective": 3594.0,
+      "pct_reduced": 93.52712340609466
+    },
+    {
+      "time": 1051,
+      "objective": 55496.0,
+      "pct_reduced": 0.05042864346949068
+    },
+    {
+      "time": 1052,
+      "objective": 1785.0,
+      "pct_reduced": 96.78517397881997
+    },
+    {
+      "time": 1060,
+      "objective": 2585.0,
+      "pct_reduced": 95.34435559397738
+    },
+    {
+      "time": 1062,
+      "objective": 1673.0,
+      "pct_reduced": 96.98688855269793
+    },
+    {
+      "time": 1064,
+      "objective": 1624.0,
+      "pct_reduced": 97.07513867876955
+    },
+    {
+      "time": 1067,
+      "objective": 1526.0,
+      "pct_reduced": 97.25163893091275
+    },
+    {
+      "time": 1068,
+      "objective": 1386.0,
+      "pct_reduced": 97.50378214826021
+    },
+    {
+      "time": 1070,
+      "objective": 2219.0,
+      "pct_reduced": 96.00353000504288
+    },
+    {
+      "time": 1074,
+      "objective": 7625.0,
+      "pct_reduced": 86.26719976946906
+    },
+    {
+      "time": 1075,
+      "objective": 1253.0,
+      "pct_reduced": 97.74331820474029
+    },
+    {
+      "time": 1078,
+      "objective": 7769.0,
+      "pct_reduced": 86.00785246019738
+    },
+    {
+      "time": 1083,
+      "objective": 1204.0,
+      "pct_reduced": 97.8315683308119
+    },
+    {
+      "time": 1087,
+      "objective": 7689.0,
+      "pct_reduced": 86.15193429868165
+    },
+    {
+      "time": 1089,
+      "objective": 5650.0,
+      "pct_reduced": 89.82422015704921
+    },
+    {
+      "time": 1090,
+      "objective": 1176.0,
+      "pct_reduced": 97.88199697428139
+    },
+    {
+      "time": 1091,
+      "objective": 5905.0,
+      "pct_reduced": 89.36495929688063
+    },
+    {
+      "time": 1097,
+      "objective": 1595.0,
+      "pct_reduced": 97.12736834522009
+    },
+    {
+      "time": 1105,
+      "objective": 889.0,
+      "pct_reduced": 98.39889056984367
+    },
+    {
+      "time": 1107,
+      "objective": 791.0,
+      "pct_reduced": 98.57539082198689
+    },
+    {
+      "time": 1119,
+      "objective": 2.0,
+      "pct_reduced": 99.9963979540379
+    },
+    {
+      "time": 1125,
+      "objective": 1.0,
+      "pct_reduced": 99.99819897701894
+    },
+    {
+      "time": 1126,
+      "objective": 3.0,
+      "pct_reduced": 99.99459693105685
+    },
+    {
+      "time": 1130,
+      "objective": 23.0,
+      "pct_reduced": 99.95857647143578
+    },
+    {
+      "time": 1135,
+      "objective": 65.0,
+      "pct_reduced": 99.88293350623154
+    },
+    {
+      "time": 1140,
+      "objective": 105.0,
+      "pct_reduced": 99.81089258698941
+    },
+    {
+      "time": 1145,
+      "objective": 145.0,
+      "pct_reduced": 99.73885166774728
+    },
+    {
+      "time": 1150,
+      "objective": 185.0,
+      "pct_reduced": 99.66681074850516
+    },
+    {
+      "time": 1155,
+      "objective": 217.0,
+      "pct_reduced": 99.60917801311145
+    },
+    {
+      "time": 1161,
+      "objective": 257.0,
+      "pct_reduced": 99.53713709386932
+    },
+    {
+      "time": 1167,
+      "objective": 281.0,
+      "pct_reduced": 99.49391254232404
+    },
+    {
+      "time": 2120,
+      "objective": 289.0,
+      "pct_reduced": 99.47950435847561
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "filename": "schedule_input_092",
+  "initial_score": 86877.0,
+  "checkpoints": [
+    {
+      "time": 0,
+      "objective": 86877.0,
+      "pct_reduced": 0.0
+    },
+    {
+      "time": 55,
+      "objective": 22800.0,
+      "pct_reduced": 73.75599986187369
+    },
+    {
+      "time": 60,
+      "objective": 1.0,
+      "pct_reduced": 99.99884894736236
+    },
+    {
+      "time": 64,
+      "objective": 2.0,
+      "pct_reduced": 99.99769789472472
+    },
+    {
+      "time": 67,
+      "objective": 3.0,
+      "pct_reduced": 99.99654684208708
+    },
+    {
+      "time": 71,
+      "objective": 4.0,
+      "pct_reduced": 99.99539578944945
+    },
+    {
+      "time": 75,
+      "objective": 5.0,
+      "pct_reduced": 99.99424473681181
+    },
+    {
+      "time": 79,
+      "objective": 6.0,
+      "pct_reduced": 99.99309368417417
+    },
+    {
+      "time": 1001,
+      "objective": 7.0,
+      "pct_reduced": 99.99194263153655
+    },
+    {
+      "time": 1010,
+      "objective": 8.0,
+      "pct_reduced": 99.99079157889891
+    },
+    {
+      "time": 1021,
+      "objective": 9.0,
+      "pct_reduced": 99.98964052626127
+    },
+    {
+      "time": 1030,
+      "objective": 10.0,
+      "pct_reduced": 99.98848947362363
+    },
+    {
+      "time": 1048,
+      "objective": 11.0,
+      "pct_reduced": 99.98733842098599
+    },
+    {
+      "time": 1062,
+      "objective": 12.0,
+      "pct_reduced": 99.98618736834835
+    },
+    {
+      "time": 1069,
+      "objective": 13.0,
+      "pct_reduced": 99.98503631571072
+    }
+  ]
+}
