@@ -5,6 +5,8 @@ Course Website: https://stanford-cme-307.github.io/web/
 
 An intelligent course scheduling optimization system that uses mixed-integer linear programming (MILP) to generate optimal course schedules while satisfying hard constraints and minimizing soft constraint violations. The system includes AI-powered explanations, what-if analysis, and a modern web interface.
 
+You can access the live demo at: https://academic-planner-hub.vercel.app/
+
 ## Overview
 
 This system solves the complex problem of scheduling university courses by:
